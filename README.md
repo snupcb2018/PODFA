@@ -67,36 +67,83 @@ PODFA consists of six main components:
 │                    PODFA System Architecture                 │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  Sensor                    Signal Processing    PC Software  │
-│  ┌──────────┐         ┌──────────────────┐   ┌────────────┐ │
-│  │ Gripper+ │         │ Raspberry Pi 5   │   │  PODFA     │ │
-│  │Transducer├────────►│ + MCP3208 ADC    │──►│  Monitor   │ │
-│  │ (0-50g)  │         │ + Signal Cond.   │   │            │ │
-│  └──────────┘         └──────────────────┘   └────────────┘ │
-│                              ▲                                │
-│                              │                                │
-│                       ┌──────┴────────┐                       │
-│                       │  Arduino UNO  │                       │
-│                       │ + TMC2209     │                       │
-│                       └───────┬────────┘                       │
-│                               ▼                                │
-│                       ┌──────────────────┐                    │
-│                       │  Vertical        │                    │
-│                       │  Z-Stage Motor   │                    │
-│                       │ + Joystick       │                    │
-│                       └──────────────────┘                    │
+│  FORCE MEASUREMENT (Fixed)          Z-STAGE CONTROL (Moving) │
+│                                                               │
+│  ┌──────────┐                       ┌──────────┐             │
+│  │ Tripod   │                       │ Joystick │             │
+│  │(stand)   │                       │          │             │
+│  └────┬─────┘                       └────┬─────┘             │
+│       │                                   │                  │
+│       ├─ MLT050                          │                  │
+│       │  (Force Sensor)                  ▼                  │
+│       │       │                    ┌──────────────┐         │
+│       │       └─ Nylon Line        │  Arduino UNO │         │
+│       │           (0.5mm)          │  + TMC2209   │         │
+│       │               │            └────┬─────────┘         │
+│       │               ▼                  │                  │
+│       │          ┌──────────┐            │                  │
+│       │          │ Gripper  │◄──┐        │                  │
+│       │          │(yellow)  │   │        │                  │
+│       │          └──────────┘   │        ▼                  │
+│       │                         │   ┌──────────────┐        │
+│       │             Petal ◄─────┘   │  Z-Stage     │        │
+│       │          (target)           │  Motor       │        │
+│       │                             └────┬─────────┘        │
+│       │                                   │                 │
+│       │                                   ▼ (moves down)    │
+│       │                          ┌──────────────────┐       │
+│       │                          │ Z-Stage Platform │       │
+│       │                          ├──────────────────┤       │
+│       │                          │  Pot with        │       │
+│       │                          │  Arabidopsis     │       │
+│       │                          └──────────────────┘       │
+│       │                                                      │
+│       │   (Independent System)                               │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              PC Software (Independent)                │  │
+│  │                                                       │  │
+│  │          Raspberry Pi (Force Data Only)              │  │
+│  │          ↓                                            │  │
+│  │          PODFA Monitor                               │  │
+│  │          • Real-time force plotting                  │  │
+│  │          • Data analysis & export                    │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                               │
+│  OPERATION:                                                   │
+│  ━━━━━━━━━━━                                                 │
+│  1. User grasps petal with gripper (hanging from nylon line)│
+│  2. Joystick controls Z-stage to move flower downward        │
+│  3. As stage lowers, relative distance ↓ → tension ↑        │
+│  4. Petal detaches at peak force → MLT050 records value     │
+│  5. Raspberry Pi transmits force data to PC                 │
+│                                                               │
+│  KEY POINTS:                                                  │
+│  • Tripod Setup: Stands independently with MLT050 mounted   │
+│  • Nylon Line: Connects sensor to gripper (tension line)    │
+│  • Z-Stage: Moves flower specimen downward (independent)    │
+│  • Force Measurement & Z-Stage Control: NO mechanical link  │
+│  • Raspberry Pi & Arduino: Operate COMPLETELY INDEPENDENTLY │
+│  • PC receives force data only (no control signals)          │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow
 
-1. **Force Acquisition**: Gripper holds petal → Force transducer converts mechanical force to voltage
+**FORCE MEASUREMENT PATH:**
+1. **Force Acquisition**: Gripper grasps petal → Z-stage lowers → Tension increases → MLT050 measures force
 2. **Signal Conditioning**: AD620 amplifier (2.5× gain) → RC low-pass filter (7.24 Hz cutoff)
 3. **Digitization**: MCP3208 ADC (12-bit) samples at high resolution
 4. **Transmission**: Raspberry Pi sends data via USB UART to PC
 5. **Processing**: PODFA Monitor applies filtering, calibration, and visualization
 6. **Storage**: Peak force recorded and data exported to Excel
+
+**Z-STAGE CONTROL PATH (Independent):**
+1. **User Input**: Joystick button/movement
+2. **Arduino Control**: Joystick values → TMC2209 driver
+3. **Motor Movement**: Stepper motor moves Z-stage up/down
+4. **Specimen Positioning**: Stage moves flower to control petal tension
 
 ---
 
