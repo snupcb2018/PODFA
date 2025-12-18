@@ -2,11 +2,11 @@
 PBS 2.0 Calibration Engine
 ===========================
 
-고급 캘리브레이션 시스템
-- 다양한 캘리브레이션 방법
-- 품질 평가 및 검증
-- 자동 데이터 수집
-- 실시간 모니터링
+Advanced calibration system
+- Multiple calibration methods
+- Quality assessment and validation
+- Automatic data collection
+- Real-time monitoring
 """
 
 import time
@@ -25,72 +25,72 @@ from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 
 class CalibrationMethod(Enum):
-    """캘리브레이션 방법 열거형"""
-    LINEAR = "linear"              # 선형 회귀
-    POLYNOMIAL_2 = "polynomial_2"  # 2차 다항식
-    POLYNOMIAL_3 = "polynomial_3"  # 3차 다항식
-    CUBIC_SPLINE = "cubic_spline"  # 큐빅 스플라인
+    """Calibration method enumeration"""
+    LINEAR = "linear"              # Linear regression
+    POLYNOMIAL_2 = "polynomial_2"  # 2nd order polynomial
+    POLYNOMIAL_3 = "polynomial_3"  # 3rd order polynomial
+    CUBIC_SPLINE = "cubic_spline"  # Cubic spline
 
 
 class CalibrationState(Enum):
-    """캘리브레이션 상태"""
+    """Calibration state"""
     IDLE = "idle"
-    COLLECTING = "collecting"      # 데이터 수집 중
-    PROCESSING = "processing"      # 계산 중
-    COMPLETED = "completed"        # 완료
-    ERROR = "error"               # 오류
+    COLLECTING = "collecting"      # Data collection in progress
+    PROCESSING = "processing"      # Processing
+    COMPLETED = "completed"        # Completed
+    ERROR = "error"               # Error
 
 
 @dataclass
 class CalibrationPoint:
-    """캘리브레이션 포인트"""
-    reference_weight: float        # 기준 무게 (g)
-    sensor_readings: List[float]   # 센서 측정값들
-    collection_time: float         # 수집 시간
-    quality_score: float = 1.0     # 품질 점수
-    
+    """Calibration point"""
+    reference_weight: float        # Reference weight (g)
+    sensor_readings: List[float]   # Sensor readings
+    collection_time: float         # Collection time
+    quality_score: float = 1.0     # Quality score
+
     @property
     def average_reading(self) -> float:
-        """평균 센서 값"""
+        """Average sensor reading"""
         return np.mean(self.sensor_readings) if self.sensor_readings else 0.0
-    
+
     @property
     def std_reading(self) -> float:
-        """표준편차"""
+        """Standard deviation"""
         return np.std(self.sensor_readings) if len(self.sensor_readings) > 1 else 0.0
-    
+
     @property
     def cv_percentage(self) -> float:
-        """변동계수 (%)"""
+        """Coefficient of variation (%)"""
         avg = self.average_reading
         return (self.std_reading / avg * 100) if avg != 0 else 0.0
 
 
 @dataclass
 class CalibrationResult:
-    """캘리브레이션 결과"""
+    """Calibration result"""
     method: CalibrationMethod
-    coefficients: Tuple[float, ...]    # 회귀 계수
-    r_squared: float                   # 결정계수
-    rmse: float                        # 제곱근 평균 제곱 오차
-    points: List[CalibrationPoint]     # 캘리브레이션 포인트들
-    created_time: float                # 생성 시간
-    validation_passed: bool = False    # 검증 통과 여부
-    
+    coefficients: Tuple[float, ...]    # Regression coefficients
+    r_squared: float                   # Coefficient of determination
+    rmse: float                        # Root mean square error
+    points: List[CalibrationPoint]     # Calibration points
+    created_time: float                # Creation time
+    validation_passed: bool = False    # Validation passed flag
+
     @property
     def quality_grade(self) -> str:
-        """품질 등급"""
+        """Quality grade"""
         if self.r_squared >= 0.99:
             return "Excellent"
         elif self.r_squared >= 0.95:
-            return "Good" 
+            return "Good"
         elif self.r_squared >= 0.90:
             return "Fair"
         else:
             return "Poor"
     
     def apply(self, sensor_value: float) -> float:
-        """센서 값을 무게로 변환"""
+        """Convert sensor value to weight"""
         if self.method == CalibrationMethod.LINEAR:
             slope, intercept = self.coefficients
             return slope * sensor_value + intercept
@@ -101,7 +101,7 @@ class CalibrationResult:
             a, b, c, d = self.coefficients
             return a * sensor_value**3 + b * sensor_value**2 + c * sensor_value + d
         else:
-            # 기본적으로 선형 변환
+            # Default linear conversion
             if len(self.coefficients) >= 2:
                 return self.coefficients[0] * sensor_value + self.coefficients[1]
             return sensor_value
@@ -109,220 +109,220 @@ class CalibrationResult:
 
 @dataclass
 class CollectionConfig:
-    """데이터 수집 설정"""
-    collection_duration: float = 10.0  # 수집 시간 (초) - 무게 안정화를 위해 증가
-    min_samples: int = 150             # 최소 샘플 수 - 안정적인 수집을 위해 증가
-    max_cv_percentage: float = 5.0     # 최대 변동계수 (%) - 캘리브레이션 모드에서 완화
-    outlier_threshold: float = 3.0     # 이상치 임계값 (표준편차 배수) - 완화
-    auto_advance: bool = True          # 자동 다음 단계
-    stabilization_time: float = 3.0    # 무게 안정화 대기 시간 (초)
+    """Data collection configuration"""
+    collection_duration: float = 10.0  # Collection time (seconds)
+    min_samples: int = 150             # Minimum number of samples
+    max_cv_percentage: float = 5.0     # Maximum coefficient of variation (%)
+    outlier_threshold: float = 3.0     # Outlier threshold (standard deviation multiplier)
+    auto_advance: bool = True          # Auto-advance to next step
+    stabilization_time: float = 3.0    # Weight stabilization wait time (seconds)
 
 
 class CalibrationEngine(QObject):
     """
-    🎯 고급 캘리브레이션 엔진
-    
+    🎯 Advanced calibration engine
+
     Features:
-    - 다양한 회귀 방법
-    - 자동 품질 평가
-    - 실시간 데이터 수집
-    - 검증 시스템
+    - Multiple regression methods
+    - Automatic quality assessment
+    - Real-time data collection
+    - Validation system
     """
-    
-    # 시그널 정의
-    state_changed = pyqtSignal(CalibrationState)            # 상태 변경
-    point_collected = pyqtSignal(CalibrationPoint)          # 포인트 수집 완료
-    progress_updated = pyqtSignal(int, str)                 # 진행률 업데이트
-    calibration_completed = pyqtSignal(CalibrationResult)   # 캘리브레이션 완료
-    data_point_added = pyqtSignal(float)                    # 데이터 포인트 추가
-    error_occurred = pyqtSignal(str)                        # 오류 발생
+
+    # Signal definitions
+    state_changed = pyqtSignal(CalibrationState)            # State changed
+    point_collected = pyqtSignal(CalibrationPoint)          # Point collection completed
+    progress_updated = pyqtSignal(int, str)                 # Progress updated
+    calibration_completed = pyqtSignal(CalibrationResult)   # Calibration completed
+    data_point_added = pyqtSignal(float)                    # Data point added
+    error_occurred = pyqtSignal(str)                        # Error occurred
     
     def __init__(self, config: Optional[CollectionConfig] = None):
         super().__init__()
         
-        # 설정
+        # Configuration
         self.config = config or CollectionConfig()
-        
-        # 상태 관리
+
+        # State management
         self.state = CalibrationState.IDLE
         self.current_step = 0
-        self.total_steps = 5  # 기본 5단계
-        
-        # 데이터 저장
+        self.total_steps = 5  # Default 5 steps
+
+        # Data storage
         self.calibration_points: List[CalibrationPoint] = []
         self.current_point: Optional[CalibrationPoint] = None
         self.current_readings: List[float] = []
-        
-        # 수집 관리
+
+        # Collection management
         self.collection_start_time: Optional[float] = None
         self.target_weight: Optional[float] = None
-        
-        # 타이머
+
+        # Timer
         self.collection_timer = QTimer()
         self.collection_timer.timeout.connect(self._check_collection_progress)
         
-        # 로깅
+        # Logging
         self.logger = logging.getLogger(__name__)
-    
+
     def start_calibration(self, reference_weights: List[float]):
         """
-        캘리브레이션 시작
-        
+        Start calibration
+
         Args:
-            reference_weights: 기준 무게 리스트 (g)
+            reference_weights: List of reference weights (g)
         """
         if self.state != CalibrationState.IDLE:
-            self.logger.warning("캘리브레이션이 이미 진행 중입니다")
+            self.logger.warning("Calibration is already in progress")
             return False
-        
-        # 초기화
+
+        # Initialize
         self.calibration_points.clear()
         self.current_step = 0
         self.total_steps = len(reference_weights)
         self.reference_weights = reference_weights
-        
-        # 상태는 IDLE 유지 - 위저드에서 각 단계를 수동으로 시작
-        self.logger.info(f"캘리브레이션 시작: {len(reference_weights)}단계")
-        
-        # 첫 번째 단계 자동 시작하지 않음 - 위저드에서 수동으로 제어
+
+        # Keep state as IDLE - wizard will start each step manually
+        self.logger.info(f"Calibration started: {len(reference_weights)} steps")
+
+        # Do not auto-start first step - wizard will control manually
         # self._start_next_point()
-        
+
         return True
     
     def start_point_collection(self, reference_weight: float):
         """
-        포인트 수집 시작
-        
+        Start point collection
+
         Args:
-            reference_weight: 기준 무게 (g)
+            reference_weight: Reference weight (g)
         """
         if self.state == CalibrationState.COLLECTING and self.current_point:
-            self.logger.warning("이미 수집 중입니다")
+            self.logger.warning("Collection is already in progress")
             return False
-        
-        # 상태를 COLLECTING으로 변경
+
+        # Change state to COLLECTING
         self._set_state(CalibrationState.COLLECTING)
-        
-        # 새 포인트 시작
+
+        # Start new point
         self.target_weight = reference_weight
         self.current_readings.clear()
         self.collection_start_time = time.time()
-        self.stabilization_start_time = time.time()  # 안정화 시작 시간
-        self.is_stabilizing = True  # 안정화 단계 플래그
-        
+        self.stabilization_start_time = time.time()  # Stabilization start time
+        self.is_stabilizing = True  # Stabilization phase flag
+
         self.current_point = CalibrationPoint(
             reference_weight=reference_weight,
             sensor_readings=[],
             collection_time=time.time()
         )
-        
-        # 타이머 시작
-        self.collection_timer.start(100)  # 100ms마다 체크
-        
-        self.logger.info(f"포인트 수집 시작: {reference_weight}g (안정화 대기 중...)")
-        self.progress_updated.emit(0, f"안정화 대기 중... {reference_weight}g")
-        
+
+        # Start timer
+        self.collection_timer.start(100)  # Check every 100ms
+
+        self.logger.info(f"Point collection started: {reference_weight}g (waiting for stabilization...)")
+        self.progress_updated.emit(0, f"Stabilizing... {reference_weight}g")
+
         return True
     
     def add_sensor_reading(self, sensor_value: float):
         """
-        센서 측정값 추가
-        
+        Add sensor reading
+
         Args:
-            sensor_value: 센서 값
+            sensor_value: Sensor value
         """
         if self.state != CalibrationState.COLLECTING or not self.current_point:
             return
-        
-        # 안정화 단계에서는 데이터만 버퍼링하고 실제 수집은 하지 않음
+
+        # During stabilization phase, only buffer data, don't actually collect
         if hasattr(self, 'is_stabilizing') and self.is_stabilizing:
-            # 안정화 중에도 이상치 검사는 완화해서 수행
-            if len(self.current_readings) >= 20:  # 충분한 데이터가 있을 때만
+            # Perform outlier check even during stabilization, but relaxed
+            if len(self.current_readings) >= 20:  # Only when sufficient data exists
                 if self._is_outlier(sensor_value):
-                    self.logger.debug(f"안정화 중 이상치 제거: {sensor_value}")
+                    self.logger.debug(f"Outlier removed during stabilization: {sensor_value}")
                     return
-            
-            # 안정화 데이터 추가 (최대 50개만 유지)
+
+            # Add stabilization data (keep max 50)
             self.current_readings.append(sensor_value)
             if len(self.current_readings) > 50:
                 self.current_readings.pop(0)
-            
+
             self.data_point_added.emit(sensor_value)
             return
-        
-        # 정식 수집 단계에서의 이상치 검사 (완화됨)
+
+        # Outlier check during actual collection phase (relaxed)
         if self._is_outlier(sensor_value):
-            self.logger.debug(f"이상치 제거: {sensor_value}")
+            self.logger.debug(f"Outlier removed: {sensor_value}")
             return
-        
-        # 데이터 추가
+
+        # Add data
         self.current_readings.append(sensor_value)
         self.current_point.sensor_readings.append(sensor_value)
-        
-        # 시그널 발송
+
+        # Emit signal
         self.data_point_added.emit(sensor_value)
     
     def complete_current_point(self) -> bool:
-        """현재 포인트 수집 완료"""
+        """Complete current point collection"""
         if not self.current_point or not self.current_readings:
-            self.logger.error("수집할 데이터가 없습니다")
+            self.logger.error("No data to collect")
             return False
-        
-        # 품질 평가
+
+        # Quality assessment
         self.current_point.quality_score = self._evaluate_point_quality(
             self.current_point
         )
-        
-        # 수집 완료
+
+        # Collection completed
         self.collection_timer.stop()
         self.calibration_points.append(self.current_point)
-        
-        # 상태를 IDLE로 복구 (위저드에서 다음 단계를 제어)
+
+        # Restore state to IDLE (wizard controls next step)
         self._set_state(CalibrationState.IDLE)
-        
-        # 시그널 발송
+
+        # Emit signal
         self.point_collected.emit(self.current_point)
-        
+
         self.logger.info(
-            f"포인트 수집 완료: {self.current_point.reference_weight}g, "
-            f"품질: {self.current_point.quality_score:.3f}"
+            f"Point collection completed: {self.current_point.reference_weight}g, "
+            f"Quality: {self.current_point.quality_score:.3f}"
         )
-        
-        # 위저드에서 step 관리하므로 여기서는 step 증가하지 않음
+
+        # Wizard manages step, so don't increment here
         # self.current_step += 1
-        
-        # 위저드에서 다음 단계 제어하므로 자동 진행하지 않음
+
+        # Wizard controls next step, so don't auto-advance
         # if self.current_step < self.total_steps:
         #     if self.config.auto_advance:
         #         self._start_next_point()
         # else:
-        #     # 모든 단계 완료
+        #     # All steps completed
         #     self._process_calibration()
-        
+
         return True
     
     def calculate_calibration(self, method: CalibrationMethod = CalibrationMethod.LINEAR) -> Optional[CalibrationResult]:
         """
-        캘리브레이션 계산
-        
+        Calculate calibration
+
         Args:
-            method: 캘리브레이션 방법
-            
+            method: Calibration method
+
         Returns:
-            캘리브레이션 결과
+            Calibration result
         """
         if len(self.calibration_points) < 2:
-            self.logger.error("최소 2개의 포인트가 필요합니다")
+            self.logger.error("Minimum 2 points required")
             return None
-        
+
         self._set_state(CalibrationState.PROCESSING)
         
         try:
-            # 데이터 준비
+            # Prepare data
             x_data = np.array([point.average_reading for point in self.calibration_points])
             y_data = np.array([point.reference_weight for point in self.calibration_points])
-            
-            # 회귀 분석
+
+            # Regression analysis
             if method == CalibrationMethod.LINEAR:
                 coeffs, r_squared, rmse = self._linear_regression(x_data, y_data)
             elif method == CalibrationMethod.POLYNOMIAL_2:
@@ -331,8 +331,8 @@ class CalibrationEngine(QObject):
                 coeffs, r_squared, rmse = self._polynomial_regression(x_data, y_data, 3)
             else:
                 coeffs, r_squared, rmse = self._linear_regression(x_data, y_data)
-            
-            # 결과 생성
+
+            # Create result
             result = CalibrationResult(
                 method=method,
                 coefficients=coeffs,
@@ -341,33 +341,33 @@ class CalibrationEngine(QObject):
                 points=self.calibration_points.copy(),
                 created_time=time.time()
             )
-            
-            # 검증 수행
+
+            # Perform validation
             result.validation_passed = self._validate_calibration(result)
-            
+
             self._set_state(CalibrationState.COMPLETED)
             self.calibration_completed.emit(result)
-            
+
             self.logger.info(
-                f"캘리브레이션 완료 - 방법: {method.value}, "
+                f"Calibration completed - Method: {method.value}, "
                 f"R²: {r_squared:.6f}, RMSE: {rmse:.6f}"
             )
-            
+
             return result
-            
+
         except Exception as e:
-            self.logger.error(f"캘리브레이션 계산 오류: {e}")
-            self.error_occurred.emit(f"계산 오류: {str(e)}")
+            self.logger.error(f"Calibration calculation error: {e}")
+            self.error_occurred.emit(f"Calculation error: {str(e)}")
             self._set_state(CalibrationState.ERROR)
             return None
     
     def save_calibration(self, result: CalibrationResult, filename: str):
         """
-        캘리브레이션 결과 저장
-        
+        Save calibration result
+
         Args:
-            result: 캘리브레이션 결과
-            filename: 저장할 파일명
+            result: Calibration result
+            filename: Filename to save
         """
         try:
             data = {
@@ -387,31 +387,31 @@ class CalibrationEngine(QObject):
                     for point in result.points
                 ]
             }
-            
+
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-                
-            self.logger.info(f"캘리브레이션 저장 완료: {filename}")
-            
+
+            self.logger.info(f"Calibration saved: {filename}")
+
         except Exception as e:
-            self.logger.error(f"캘리브레이션 저장 실패: {e}")
-            self.error_occurred.emit(f"저장 실패: {str(e)}")
+            self.logger.error(f"Calibration save failed: {e}")
+            self.error_occurred.emit(f"Save failed: {str(e)}")
     
     def load_calibration(self, filename: str) -> Optional[CalibrationResult]:
         """
-        캘리브레이션 결과 로드
-        
+        Load calibration result
+
         Args:
-            filename: 파일명
-            
+            filename: Filename
+
         Returns:
-            캘리브레이션 결과
+            Calibration result
         """
         try:
             with open(filename, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
-            # 포인트 복원
+
+            # Restore points
             points = []
             for point_data in data['points']:
                 point = CalibrationPoint(
@@ -421,8 +421,8 @@ class CalibrationEngine(QObject):
                     quality_score=point_data.get('quality_score', 1.0)
                 )
                 points.append(point)
-            
-            # 결과 복원
+
+            # Restore result
             result = CalibrationResult(
                 method=CalibrationMethod(data['method']),
                 coefficients=tuple(data['coefficients']),
@@ -432,210 +432,210 @@ class CalibrationEngine(QObject):
                 created_time=data['created_time'],
                 validation_passed=data.get('validation_passed', False)
             )
-            
-            self.logger.info(f"캘리브레이션 로드 완료: {filename}")
+
+            self.logger.info(f"Calibration loaded: {filename}")
             return result
-            
+
         except Exception as e:
-            self.logger.error(f"캘리브레이션 로드 실패: {e}")
-            self.error_occurred.emit(f"로드 실패: {str(e)}")
+            self.logger.error(f"Calibration load failed: {e}")
+            self.error_occurred.emit(f"Load failed: {str(e)}")
             return None
     
     def cancel_calibration(self):
-        """캘리브레이션 취소"""
+        """Cancel calibration"""
         self.collection_timer.stop()
         self.calibration_points.clear()
         self.current_point = None
         self.current_readings.clear()
         self.current_step = 0
-        
+
         self._set_state(CalibrationState.IDLE)
-        self.logger.info("캘리브레이션 취소됨")
+        self.logger.info("Calibration cancelled")
     
     def _start_next_point(self):
-        """다음 포인트 수집 시작"""
+        """Start next point collection"""
         if self.current_step < len(self.reference_weights):
             next_weight = self.reference_weights[self.current_step]
             self.start_point_collection(next_weight)
-        
+
     def _check_collection_progress(self):
-        """수집 진행률 체크"""
+        """Check collection progress"""
         if not self.current_point or not self.collection_start_time:
             return
-        
+
         current_time = time.time()
-        
-        # 안정화 단계 처리
+
+        # Handle stabilization phase
         if hasattr(self, 'is_stabilizing') and self.is_stabilizing:
             stabilization_elapsed = current_time - self.stabilization_start_time
             stabilization_progress = min(int((stabilization_elapsed / self.config.stabilization_time) * 100), 100)
-            
+
             sample_count = len(self.current_readings)
-            status = f"안정화 중... {self.target_weight}g ({sample_count} samples, {stabilization_elapsed:.1f}s)"
+            status = f"Stabilizing... {self.target_weight}g ({sample_count} samples, {stabilization_elapsed:.1f}s)"
             self.progress_updated.emit(stabilization_progress, status)
-            
-            # 안정화 완료 체크
+
+            # Check stabilization completion
             if stabilization_elapsed >= self.config.stabilization_time:
                 self.is_stabilizing = False
-                self.collection_start_time = current_time  # 실제 수집 시작 시간 재설정
-                self.current_point.sensor_readings.clear()  # 실제 수집 데이터 초기화
-                self.logger.info(f"안정화 완료, 실제 수집 시작: {self.target_weight}g")
-                self.progress_updated.emit(0, f"수집 시작... {self.target_weight}g")
+                self.collection_start_time = current_time  # Reset actual collection start time
+                self.current_point.sensor_readings.clear()  # Clear stabilization data
+                self.logger.info(f"Stabilization completed, starting actual collection: {self.target_weight}g")
+                self.progress_updated.emit(0, f"Collecting... {self.target_weight}g")
             return
-        
-        # 실제 수집 단계
+
+        # Actual collection phase
         elapsed = current_time - self.collection_start_time
         progress = min(int((elapsed / self.config.collection_duration) * 100), 100)
-        
-        # 진행률 업데이트
-        sample_count = len(self.current_point.sensor_readings)  # 실제 수집된 데이터만
-        total_samples = len(self.current_readings)  # 안정화 포함 전체
-        
-        status = f"수집 중... {self.target_weight}g ({sample_count}/{self.config.min_samples} samples)"
+
+        # Update progress
+        sample_count = len(self.current_point.sensor_readings)  # Only actual collected data
+        total_samples = len(self.current_readings)  # All including stabilization
+
+        status = f"Collecting... {self.target_weight}g ({sample_count}/{self.config.min_samples} samples)"
         self.progress_updated.emit(progress, status)
-        
-        # 수집 완료 조건 체크
-        if (elapsed >= self.config.collection_duration and 
+
+        # Check collection completion
+        if (elapsed >= self.config.collection_duration and
             sample_count >= self.config.min_samples):
-            
-            # 품질 체크
-            if sample_count > 0:  # 데이터가 있을 때만 완료
+
+            # Quality check
+            if sample_count > 0:  # Complete only if data exists
                 self.complete_current_point()
             else:
-                # 데이터가 없으면 더 기다림
-                self.logger.warning(f"수집된 데이터 부족: {sample_count}개")
-        elif elapsed >= self.config.collection_duration * 2:  # 최대 2배까지 대기
-            # 시간 초과, 강제 완료
-            self.logger.warning(f"시간 초과, 강제 완료: {sample_count}개 샘플")
-            if sample_count > 10:  # 최소한의 데이터가 있으면 완료
+                # Wait longer if no data
+                self.logger.warning(f"Insufficient collected data: {sample_count}")
+        elif elapsed >= self.config.collection_duration * 2:  # Wait max 2x
+            # Timeout, force completion
+            self.logger.warning(f"Timeout, force completion: {sample_count} samples")
+            if sample_count > 10:  # Complete if minimum data exists
                 self.complete_current_point()
     
     def _is_outlier(self, value: float) -> bool:
-        """이상치 검사 (캘리브레이션 모드에서는 완화됨)"""
-        if len(self.current_readings) < 10:  # 더 많은 데이터 필요
+        """Outlier detection (relaxed in calibration mode)"""
+        if len(self.current_readings) < 10:
             return False
-        
-        # 캘리브레이션 모드에서는 이상치 임계값을 높임 (더 관대함)
-        outlier_threshold = self.config.outlier_threshold * 3.0  # 3배 완화
-        
-        recent = self.current_readings[-10:]  # 더 많은 최근 데이터 사용
+
+        # Increase outlier threshold in calibration mode (more lenient)
+        outlier_threshold = self.config.outlier_threshold * 3.0
+
+        recent = self.current_readings[-10:]
         mean_val = np.mean(recent)
         std_val = np.std(recent)
-        
+
         if std_val == 0:
             return False
-        
+
         z_score = abs((value - mean_val) / std_val)
-        
-        # 캘리브레이션 중에는 큰 변화도 허용
+
+        # Allow large variations during calibration
         return z_score > outlier_threshold
     
     def _evaluate_point_quality(self, point: CalibrationPoint) -> float:
-        """포인트 품질 평가"""
+        """Evaluate point quality"""
         quality = 1.0
-        
-        # 변동계수 기준
+
+        # Coefficient of variation criteria
         cv = point.cv_percentage
         if cv > self.config.max_cv_percentage:
             quality *= 0.5
-        
-        # 샘플 수 기준
+
+        # Sample count criteria
         if len(point.sensor_readings) < self.config.min_samples:
             quality *= 0.7
-        
+
         return max(0.0, min(1.0, quality))
     
     def _linear_regression(self, x_data: np.ndarray, y_data: np.ndarray) -> Tuple[Tuple[float, float], float, float]:
-        """선형 회귀"""
+        """Linear regression"""
         slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
-        
-        # 예측값 계산
+
+        # Calculate predictions
         y_pred = slope * x_data + intercept
-        
-        # RMSE 계산
+
+        # Calculate RMSE
         rmse = np.sqrt(np.mean((y_data - y_pred) ** 2))
-        
+
         return (slope, intercept), r_value ** 2, rmse
-    
+
     def _polynomial_regression(self, x_data: np.ndarray, y_data: np.ndarray, degree: int) -> Tuple[Tuple[float, ...], float, float]:
-        """다항식 회귀"""
+        """Polynomial regression"""
         coeffs = np.polyfit(x_data, y_data, degree)
-        
-        # 예측값 계산
+
+        # Calculate predictions
         y_pred = np.polyval(coeffs, x_data)
-        
-        # R² 계산
+
+        # Calculate R²
         ss_res = np.sum((y_data - y_pred) ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        
-        # RMSE 계산
+
+        # Calculate RMSE
         rmse = np.sqrt(np.mean((y_data - y_pred) ** 2))
-        
+
         return tuple(coeffs), r_squared, rmse
     
     def _validate_calibration(self, result: CalibrationResult) -> bool:
-        """캘리브레이션 검증"""
-        # 기본 품질 기준
+        """Validate calibration"""
+        # Basic quality criteria
         min_r_squared = 0.95
-        max_rmse = 0.1  # 0.1g 이내
-        
-        # R² 검사
+        max_rmse = 0.1
+
+        # R² check
         if result.r_squared < min_r_squared:
-            self.logger.warning(f"R² 너무 낮음: {result.r_squared:.6f}")
+            self.logger.warning(f"R² too low: {result.r_squared:.6f}")
             return False
-        
-        # RMSE 검사
+
+        # RMSE check
         if result.rmse > max_rmse:
-            self.logger.warning(f"RMSE 너무 높음: {result.rmse:.6f}")
+            self.logger.warning(f"RMSE too high: {result.rmse:.6f}")
             return False
-        
-        # 계수 유효성 검사
+
+        # Coefficient validity check
         if result.method == CalibrationMethod.LINEAR:
             slope, intercept = result.coefficients
             if slope <= 0:
-                self.logger.warning("기울기가 0 이하입니다")
+                self.logger.warning("Slope is zero or negative")
                 return False
-        
+
         return True
-    
+
     def _process_calibration(self):
-        """캘리브레이션 처리"""
-        # 자동으로 최적의 방법 선택하여 계산
+        """Process calibration"""
+        # Automatically select optimal method
         methods = [
             CalibrationMethod.LINEAR,
             CalibrationMethod.POLYNOMIAL_2,
             CalibrationMethod.POLYNOMIAL_3
         ]
-        
+
         best_result = None
         best_score = -1
-        
+
         for method in methods:
             result = self.calculate_calibration(method)
             if result and result.validation_passed:
-                # 점수 계산 (R² 우선, RMSE 고려)
+                # Calculate score (R² priority, RMSE consideration)
                 score = result.r_squared - (result.rmse * 0.1)
                 if score > best_score:
                     best_score = score
                     best_result = result
-        
+
         if best_result:
-            self.logger.info(f"최적 방법 선택: {best_result.method.value}")
+            self.logger.info(f"Optimal method selected: {best_result.method.value}")
         else:
-            # 검증 실패해도 선형 회귀 결과는 제공
+            # Provide linear regression result even if validation fails
             best_result = self.calculate_calibration(CalibrationMethod.LINEAR)
-    
+
     def _set_state(self, new_state: CalibrationState):
-        """상태 변경"""
+        """Change state"""
         if self.state != new_state:
             old_state = self.state
             self.state = new_state
-            self.logger.debug(f"상태 변경: {old_state.value} -> {new_state.value}")
+            self.logger.debug(f"State change: {old_state.value} -> {new_state.value}")
             self.state_changed.emit(new_state)
-    
+
     def cleanup(self):
-        """리소스 정리"""
+        """Clean up resources"""
         self.collection_timer.stop()
         self.calibration_points.clear()
         self.current_point = None
@@ -643,5 +643,5 @@ class CalibrationEngine(QObject):
         self._set_state(CalibrationState.IDLE)
 
 
-# 호환성을 위한 별명
+# Compatibility alias
 CalibrationManager = CalibrationEngine

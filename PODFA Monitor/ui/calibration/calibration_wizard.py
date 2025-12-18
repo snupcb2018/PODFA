@@ -2,7 +2,7 @@
 PBS 2.0 Calibration Wizard
 ===========================
 
-캘리브레이션 마법사 - QWizard 기반 단계별 인터페이스
+Calibration wizard - QWizard-based step-by-step interface
 """
 
 import logging
@@ -30,13 +30,13 @@ from core.calibration import (
 
 @dataclass
 class CalibrationSettings:
-    """캘리브레이션 설정"""
-    reference_weights: List[float]  # 기준 무게 리스트 (누적)
-    individual_weights: List[float]  # 개별 무게 리스트 (단일)
-    collection_duration: float = 5.0  # 각 포인트 수집 시간
-    min_samples: int = 100  # 최소 샘플 수
-    method: CalibrationMethod = CalibrationMethod.LINEAR  # 회귀 방법
-    save_profile: bool = True  # 프로파일 저장
+    """Calibration settings"""
+    reference_weights: List[float]  # Reference weights list (cumulative)
+    individual_weights: List[float]  # Individual weights list (single)
+    collection_duration: float = 5.0  # Collection time per point
+    min_samples: int = 100  # Minimum sample count
+    method: CalibrationMethod = CalibrationMethod.LINEAR  # Regression method
+    save_profile: bool = True  # Save profile
 
 
 class IntroductionPage(QWizardPage):
@@ -174,12 +174,12 @@ class WeightSettingsPage(QWizardPage):
         desc_label.setStyleSheet("QLabel { background-color: #e8f5e8; padding: 8px; border-radius: 4px; }")
         weight_layout.addWidget(desc_label)
         
-        # 무게 입력 테이블
+        # Weight input table
         self.weight_table = QTableWidget(5, 4)
         self.weight_table.setHorizontalHeaderLabels(["Use", "Weight (g)", "Total Weight (g)", "Description"])
         self.weight_table.horizontalHeader().setStretchLastSection(True)
         self.weight_table.setAlternatingRowColors(True)
-        
+
         # Default weight data (cumulative method) - All 5 steps checked by default
         default_steps = [
             (True, 0.00, "Step 1: Zero point (No load)"),
@@ -188,43 +188,43 @@ class WeightSettingsPage(QWizardPage):
             (True, 1.00, "Step 4: Add third weight"),
             (True, 1.08, "Step 5: Add fourth weight")
         ]
-        
+
         for row, (use, weight, desc) in enumerate(default_steps):
-            # 체크박스
+            # Checkbox
             check = QCheckBox()
             check.setChecked(use)
             self.weight_table.setCellWidget(row, 0, check)
-            
-            # 추가할 무게 (편집 가능한 SpinBox)
+
+            # Weight to add (editable SpinBox)
             weight_spin = QDoubleSpinBox()
             weight_spin.setRange(0.0, 1000.0)
             weight_spin.setValue(weight)
-            weight_spin.setDecimals(2)  # 소수 2자리
+            weight_spin.setDecimals(2)
             weight_spin.setSuffix(" g")
             weight_spin.setMinimumWidth(120)
-            if row == 0:  # 첫 번째 행은 0으로 고정
+            if row == 0:  # First row fixed to 0
                 weight_spin.setEnabled(False)
                 weight_spin.setStyleSheet("background-color: #f0f0f0;")
             else:
                 weight_spin.valueChanged.connect(self._update_cumulative_weights)
             self.weight_table.setCellWidget(row, 1, weight_spin)
-            
-            # 누적 무게 (읽기 전용)
+
+            # Cumulative weight (read-only)
             cumulative_label = QLabel("0.00 g")
             cumulative_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cumulative_label.setStyleSheet("background-color: #f8f8f8; padding: 4px; border-radius: 2px;")
             self.weight_table.setCellWidget(row, 2, cumulative_label)
-            
-            # 설명 (편집 가능한 텍스트)
+
+            # Description (editable text)
             desc_item = QTableWidgetItem(desc)
             desc_item.setFlags(desc_item.flags() | Qt.ItemFlag.ItemIsEditable)
             self.weight_table.setItem(row, 3, desc_item)
-        
-        # 초기 누적 무게 계산
+
+        # Calculate initial cumulative weights
         self._update_cumulative_weights()
-        
+
         weight_layout.addWidget(self.weight_table)
-        
+
         # Weight management buttons
         button_layout = QHBoxLayout()
         
@@ -266,26 +266,26 @@ class WeightSettingsPage(QWizardPage):
         self.setLayout(layout)
     
     def _update_cumulative_weights(self):
-        """누적 무게 업데이트"""
+        """Update cumulative weights"""
         cumulative = 0.0
-        
+
         for row in range(self.weight_table.rowCount()):
-            # 추가할 무게 가져오기
+            # Get weight to add
             weight_spin = self.weight_table.cellWidget(row, 1)
             if weight_spin:
                 if row == 0:
-                    # 첫 번째 행은 항상 0
+                    # First row is always 0
                     cumulative = 0.0
                 else:
-                    # 누적 계산
+                    # Accumulate
                     cumulative += weight_spin.value()
-                
-                # 누적 무게 레이블 업데이트
+
+                # Update cumulative weight label
                 cumulative_label = self.weight_table.cellWidget(row, 2)
                 if cumulative_label:
                     cumulative_label.setText(f"{cumulative:.2f} g")
-                    
-                    # 색상 구분 (무게에 따라)
+
+                    # Color distinction (based on weight)
                     if cumulative == 0.0:
                         cumulative_label.setStyleSheet(
                             "background-color: #f0f0f0; padding: 4px; border-radius: 2px; color: #666;"
@@ -296,75 +296,75 @@ class WeightSettingsPage(QWizardPage):
                         )
     
     def _add_weight_row(self):
-        """무게 행 추가"""
+        """Add weight row"""
         row = self.weight_table.rowCount()
         self.weight_table.insertRow(row)
-        
-        # 체크박스
+
+        # Checkbox
         check = QCheckBox()
         check.setChecked(True)
         self.weight_table.setCellWidget(row, 0, check)
-        
-        # 추가할 무게 SpinBox
+
+        # Weight SpinBox to add
         weight_spin = QDoubleSpinBox()
         weight_spin.setRange(0.0, 1000.0)
         weight_spin.setValue(1.00)
-        weight_spin.setDecimals(2)  # 소수 2자리
+        weight_spin.setDecimals(2)
         weight_spin.setSuffix(" g")
         weight_spin.setMinimumWidth(120)
         weight_spin.valueChanged.connect(self._update_cumulative_weights)
         self.weight_table.setCellWidget(row, 1, weight_spin)
-        
-        # 누적 무게 레이블
+
+        # Cumulative weight label
         cumulative_label = QLabel("0.00 g")
         cumulative_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         cumulative_label.setStyleSheet("background-color: #f8f8f8; padding: 4px; border-radius: 2px;")
         self.weight_table.setCellWidget(row, 2, cumulative_label)
-        
-        # 설명
-        desc_item = QTableWidgetItem(f"{row + 1}단계: 추가 무게추")
+
+        # Description
+        desc_item = QTableWidgetItem(f"Step {row + 1}: Additional weight")
         desc_item.setFlags(desc_item.flags() | Qt.ItemFlag.ItemIsEditable)
         self.weight_table.setItem(row, 3, desc_item)
-        
-        # 누적 무게 업데이트
+
+        # Update cumulative weights
         self._update_cumulative_weights()
-        
-        # 새 행으로 스크롤
+
+        # Scroll to new row
         self.weight_table.scrollToItem(desc_item)
     
     def _remove_selected_rows(self):
-        """선택된 행 삭제"""
+        """Remove selected rows"""
         selected_rows = set()
         for item in self.weight_table.selectedItems():
             selected_rows.add(item.row())
-        
-        # 첫 번째 행(영점)은 삭제 불가
+
+        # First row (zero point) cannot be deleted
         selected_rows.discard(0)
-        
+
         if not selected_rows:
             QMessageBox.information(
                 self,
-                "삭제 불가",
-                "영점(첫 번째 행)은 삭제할 수 없습니다.\n다른 행을 선택해주세요."
+                "Cannot Delete",
+                "The zero point (first row) cannot be deleted.\nPlease select another row."
             )
             return
-        
-        # 역순으로 삭제 (인덱스 변경 방지)
+
+        # Delete in reverse order (to prevent index change)
         for row in sorted(selected_rows, reverse=True):
             self.weight_table.removeRow(row)
-        
-        # 최소 2행은 유지 (영점 + 1개 이상)
+
+        # Keep minimum 2 rows (zero point + at least 1)
         if self.weight_table.rowCount() < 2:
             self._add_weight_row()
-        
-        # 누적 무게 재계산
+
+        # Recalculate cumulative weights
         self._update_cumulative_weights()
     
     def get_weights(self) -> List[float]:
-        """선택된 누적 무게 목록 반환"""
+        """Return selected cumulative weight list"""
         weights = []
         cumulative = 0.0
-        
+
         for row in range(self.weight_table.rowCount()):
             check = self.weight_table.cellWidget(row, 0)
             if check and check.isChecked():
@@ -375,29 +375,29 @@ class WeightSettingsPage(QWizardPage):
                     else:
                         cumulative += weight_spin.value()
                     weights.append(round(cumulative, 2))
-        
-        return weights  # 이미 순서대로 되어 있음
-    
+
+        return weights
+
     def get_individual_weights(self) -> List[float]:
-        """선택된 개별 무게 목록 반환 (단일 무게)"""
+        """Return selected individual weight list (single weights)"""
         individual_weights = []
-        
+
         for row in range(self.weight_table.rowCount()):
             check = self.weight_table.cellWidget(row, 0)
             if check and check.isChecked():
                 weight_spin = self.weight_table.cellWidget(row, 1)
                 if weight_spin:
                     if row == 0:
-                        individual_weights.append(0.0)  # 영점
+                        individual_weights.append(0.0)  # Zero point
                     else:
                         individual_weights.append(round(weight_spin.value(), 2))
-        
+
         return individual_weights
     
     def validatePage(self):
-        """페이지 검증"""
+        """Validate page"""
         weights = self.get_weights()
-        
+
         # Check minimum count
         if len(weights) < 2:
             QMessageBox.warning(
@@ -407,7 +407,7 @@ class WeightSettingsPage(QWizardPage):
                 "3 or more weights are recommended for accurate calibration."
             )
             return False
-        
+
         # Check for duplicate weights
         if len(weights) != len(set(weights)):
             QMessageBox.warning(
@@ -417,7 +417,7 @@ class WeightSettingsPage(QWizardPage):
                 "Please use different weights for each step."
             )
             return False
-        
+
         # Check weight range
         if max(weights) - min(weights) < 10.0:
             reply = QMessageBox.question(
@@ -430,7 +430,7 @@ class WeightSettingsPage(QWizardPage):
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
-        
+
         # Save settings
         wizard = self.wizard()
         if wizard:
@@ -441,10 +441,10 @@ class WeightSettingsPage(QWizardPage):
                 collection_duration=self.duration_spin.value(),
                 min_samples=self.min_samples_spin.value()
             )
-            
+
             # Log selected weight information
             wizard.logger.info(f"Calibration weight settings: {weights}")
-        
+
         return True
 
 
@@ -467,8 +467,8 @@ class CollectionPage(QWizardPage):
     
     def _init_ui(self):
         layout = QVBoxLayout()
-        
-        # 현재 단계 표시
+
+        # Current step display
         self.step_label = QLabel()
         self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         font = QFont()
@@ -521,8 +521,8 @@ class CollectionPage(QWizardPage):
         
         data_group.setLayout(data_layout)
         layout.addWidget(data_group)
-        
-        # 진행률
+
+        # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setTextVisible(True)
         layout.addWidget(self.progress_bar)
@@ -552,33 +552,33 @@ class CollectionPage(QWizardPage):
         self.setLayout(layout)
     
     def initializePage(self):
-        """페이지 초기화"""
+        """Initialize page"""
         wizard = self.wizard()
         if wizard and hasattr(wizard, 'settings'):
-            self.weights = wizard.settings.reference_weights  # 누적 무게 (캘리브레이션용)
-            self.individual_weights = wizard.settings.individual_weights  # 개별 무게 (안내용)
+            self.weights = wizard.settings.reference_weights  # Cumulative weights (for calibration)
+            self.individual_weights = wizard.settings.individual_weights  # Individual weights (for guidance)
             self.total_steps = len(self.weights)
             self.current_step = 0
-            
-            # 캘리브레이션 엔진 연결
+
+            # Connect calibration engine
             if hasattr(wizard, 'calibration_engine'):
                 engine = wizard.calibration_engine
-                
-                # 시그널 연결
+
+                # Connect signals
                 engine.data_point_added.connect(self.update_sensor_value)
                 engine.progress_updated.connect(self.update_progress)
                 engine.point_collected.connect(self.on_point_collected)
                 engine.error_occurred.connect(self.on_error)
-                
-                # 캘리브레이션 시작
+
+                # Start calibration
                 config = CollectionConfig(
                     collection_duration=wizard.settings.collection_duration,
                     min_samples=wizard.settings.min_samples,
-                    auto_advance=False  # 항상 수동 진행
+                    auto_advance=False  # Always manual progression
                 )
                 engine.config = config
                 engine.start_calibration(self.weights)
-            
+
             self.update_display()
     
     def update_display(self):
@@ -629,12 +629,12 @@ class CollectionPage(QWizardPage):
                 self.status_label.setText(f"Collecting {current_individual_weight}g weight...")
     
     def skip_weight(self):
-        """현재 무게 건너뛰기"""
+        """Skip current weight"""
         self.current_step += 1
         self.is_collecting = False
         self.start_button.setEnabled(True)
         self.skip_button.setEnabled(False)
-        
+
         if self.current_step >= self.total_steps:
             self.collection_completed.emit()
             wizard = self.wizard()
@@ -642,10 +642,10 @@ class CollectionPage(QWizardPage):
                 wizard.next()
         else:
             self.update_display()
-    
+
     @pyqtSlot(float)
     def update_sensor_value(self, value):
-        """센서 값 업데이트"""
+        """Update sensor value"""
         self.current_value_label.setText(f"{value:.2f}")
     
     @pyqtSlot(int, str)

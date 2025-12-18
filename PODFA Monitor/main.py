@@ -3,14 +3,14 @@
 PBS 2.0 Main Application
 ========================
 
-PBS 계측기 2.0 메인 애플리케이션
+PBS Meter 2.0 Main Application
 
 Features:
-- 멋진 꺾은선 그래프
-- 윈도우 스크롤링
-- 마우스 호버 값 표시  
-- 향상된 엑셀 저장 (현재 윈도 영역)
-- 고급스러운 UI/UX
+- Beautiful line charts
+- Window scrolling
+- Mouse hover value display
+- Enhanced Excel export (current window area)
+- Sophisticated UI/UX
 
 Usage:
     python main.py
@@ -21,16 +21,16 @@ import os
 import logging
 from pathlib import Path
 
-# 현재 스크립트 디렉토리를 Python 경로에 추가
+# Add current script directory to Python path
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import Qt
 
-# 로깅 설정
+# Configure logging
 logging.basicConfig(
-    level=logging.INFO,  # DEBUG 레벨로 변경하여 모든 로그 출력
+    level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s',
     handlers=[
         logging.FileHandler('pbs_2.0.log', encoding='utf-8'),
@@ -42,32 +42,32 @@ logger = logging.getLogger(__name__)
 
 
 class PBS2Application(QApplication):
-    """PBS 2.0 메인 애플리케이션 클래스"""
-    
+    """PBS 2.0 main application class"""
+
     def __init__(self, argv):
         super().__init__(argv)
-        
-        # 애플리케이션 정보 설정
+
+        # Set application information
         self.setApplicationName("PODFA")
         self.setApplicationVersion("2.0.0")
         self.setOrganizationName("PBS Team")
         self.setOrganizationDomain("pbs.local")
-        
-        # 스타일 설정
+
+        # Set style
         self.setStyle('Fusion')
-        
-        # 고DPI 지원 (PyQt6에서는 자동 처리됨)
+
+        # High DPI support (automatically handled in PyQt6)
         try:
             self.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
             self.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
         except AttributeError:
-            # PyQt6에서는 기본적으로 High DPI를 지원하므로 무시
+            # PyQt6 supports High DPI by default
             logger.info("High DPI settings are supported by default in PyQt6")
-        
+
         logger.info("PBS 2.0 application initialization complete")
-    
+
     def show_error_message(self, title: str, message: str):
-        """에러 메시지 표시"""
+        """Show error message"""
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle(title)
@@ -77,7 +77,7 @@ class PBS2Application(QApplication):
 
 
 def check_dependencies():
-    """의존성 패키지 검사"""
+    """Check for required dependency packages"""
     required_packages = [
         'PyQt6',
         'matplotlib',
@@ -90,9 +90,9 @@ def check_dependencies():
         'scipy',
         'PIL'  # Pillow
     ]
-    
+
     missing_packages = []
-    
+
     for package in required_packages:
         try:
             __import__(package)
@@ -100,7 +100,7 @@ def check_dependencies():
         except ImportError:
             missing_packages.append(package)
             logger.error(f"✗ {package} package not found")
-    
+
     if missing_packages:
         error_msg = (
             f"The following packages are not installed:\n\n"
@@ -108,36 +108,36 @@ def check_dependencies():
             f"To install them, run:\n"
             f"pip install {' '.join(missing_packages)}"
         )
-        
+
         return False, error_msg
-    
+
     return True, "All dependency packages are installed"
 
 
 def main():
-    """메인 함수"""
+    """Main function"""
     try:
-        # QtWebEngine을 위한 필수 설정 (QApplication 생성 전에 해야 함)
+        # Required settings for QtWebEngine (must be before QApplication creation)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
-        
-        # 애플리케이션 생성
+
+        # Create application
         app = PBS2Application(sys.argv)
-        
+
         logger.info("Starting PBS Meter 2.0")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"PyQt6 version: {app.applicationVersion()}")
         logger.info(f"Current working directory: {os.getcwd()}")
-        
-        # 의존성 검사
+
+        # Check dependencies
         deps_ok, deps_msg = check_dependencies()
         if not deps_ok:
             logger.error("Dependency check failed")
             app.show_error_message("Dependency Error", deps_msg)
             return 1
-        
+
         logger.info("Dependency check passed")
-        
-        # 메인 윈도우 임포트 (의존성 검사 후)
+
+        # Import main window (after dependency check)
         try:
             from ui.main_window import MainWindow
         except ImportError as e:
@@ -148,8 +148,8 @@ def main():
                 f"Please verify all files are in the correct location."
             )
             return 1
-        
-        # 메인 윈도우 생성 및 표시
+
+        # Create and display main window
         try:
             main_window = MainWindow()
             main_window.show()
@@ -161,7 +161,7 @@ def main():
                 f"Cannot create main window:\n{str(e)}"
             )
             return 1
-        
+
         # Welcome message
         logger.info("PBS 2.0 ready!")
         print("\n" + "="*50)
@@ -180,10 +180,10 @@ def main():
         print("4. Click Start button to begin measurement")
         print("5. Hover mouse over charts!")
         print("="*50)
-        
-        # 이벤트 루프 시작
+
+        # Start event loop
         exit_code = app.exec()
-        
+
         logger.info(f"PBS 2.0 terminated (exit code: {exit_code})")
         return exit_code
         
