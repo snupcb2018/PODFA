@@ -772,12 +772,6 @@ For questions or collaboration:
 
 ---
 
-## License
-
-[License information to be added]
-
----
-
 ## Acknowledgments
 
 This work was supported by:
