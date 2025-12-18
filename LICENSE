@@ -1,0 +1,60 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (c) 2025 Hoon Jung, Minsoo Han, Yuree Lee
+
+PODFA (Plant Organ Detachment Force Analyzer) is free software: you can
+redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version.
+
+PODFA is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+PODFA. If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+SUMMARY OF GPL v3 LICENSE FOR PODFA:
+
+You are FREE to:
+✅ Use PODFA for research, educational, and experimental purposes
+✅ Modify the software and hardware designs
+✅ Share and distribute your modifications
+✅ Redistribute PODFA to others
+
+You MUST:
+📋 Include this license with any copies you distribute
+📋 State significant changes you made
+📋 Include the original authors' copyright notice
+📋 Apply the same GPL v3 license to your modifications
+
+You CANNOT:
+❌ Use PODFA for direct commercial profit without sharing your modifications
+❌ Apply a proprietary license to modified versions
+❌ Claim ownership of the original design
+
+CLARIFICATION FOR PODFA:
+
+This GPL v3 license applies to:
+- All Python source code (PODFA Monitor, Raspberry Pi)
+- All Arduino firmware code (Vertical Z-Stage)
+- All hardware designs (circuit diagrams, PCB layouts, Gerber files)
+
+If you modify and use PODFA:
+1. You must keep the GPL v3 license on your modified versions
+2. You must document and share your improvements with the community
+3. You must include attribution to the original authors
+4. If you publish your improvements, please consider contributing back to the project
+
+DOCUMENTATION LICENSE:
+
+The README.md, user guides, and technical documentation are licensed under
+Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA 4.0).
+
+---
+
+For the complete GPL v3 license text, please visit:
+https://www.gnu.org/licenses/gpl-3.0.en.html

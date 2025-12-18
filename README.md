@@ -5,6 +5,12 @@ A Raspberry Pi-based, user-friendly system for measuring petal detachment force 
 **Authors**: Minsoo Han*, Hoon Jung*, Yuree Lee‡
 *Equal contribution | ‡Correspondence
 
+## License
+
+**GNU General Public License v3 (GPL v3)** - See [LICENSE](./LICENSE) file
+
+This software is designed for **research and educational purposes**. You are free to use, modify, and share your improvements, but modifications must be kept open-source under the same GPL v3 license. Commercial use is permitted only if source code modifications are shared publicly.
+
 ---
 
 ## Table of Contents
